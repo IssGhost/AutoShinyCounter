@@ -1,0 +1,29 @@
+# Copy this file to config.yaml and tune thresholds based on your game/capture feed.
+camera_index: 0
+poll_interval_ms: 250
+cooldown_seconds: 3.0
+
+# OCR mode checks for expected battle text fragments.
+ocr:
+  enabled: true
+  # Optional explicit path for systems where tesseract is installed but not in PATH.
+  # Windows example:
+  # tesseract_cmd: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+  tesseract_cmd: ""
+  roi: [0.05, 0.72, 0.90, 0.25] # x, y, w, h (relative to frame)
+  phrases:
+    - "wild"
+    - "appeared"
+  min_confidence: 0.55
+
+# Template mode checks for visual match of a battle-start indicator image.
+template:
+  enabled: true
+  image_path: ""
+  threshold: 0.88
+
+# Optional per-game encounter gating to prevent duplicate counts
+# when battle intro remains on-screen for multiple polling cycles.
+detection:
+  motion_roi: [0.0, 0.0, 1.0, 1.0]
+  min_motion_score: 12.0
