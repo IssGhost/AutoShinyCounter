@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shiny Overlay</title>
+    <style>
+      body { margin: 0; background: transparent; font-family: Arial, sans-serif; }
+      .overlay { color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9); padding: 24px; }
+      .count { font-size: 72px; font-weight: 700; }
+      .target { font-size: 30px; margin-bottom: 8px; }
+      img { margin-top: 12px; max-height: 220px; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="overlay">
+      <div class="target" id="target">{{ state.target_name or "Current Hunt" }}</div>
+      <div class="count" id="count">{{ state.encounters }}</div>
+      {% if state.shiny_image_path %}
+      <img id="shiny" src="{{ state.shiny_image_path }}" alt="shiny target" />
+      {% endif %}
+    </div>
+
+    <script>
+      async function refresh() {
+        const res = await fetch('/api/state');
+        const s = await res.json();
+        document.getElementById('count').textContent = s.encounters;
+        document.getElementById('target').textContent = s.target_name || 'Current Hunt';
+
+        const existing = document.getElementById('shiny');
+        if (s.shiny_image_path && !existing) {
+          const img = document.createElement('img');
+          img.id = 'shiny';
+          img.src = s.shiny_image_path;
+          img.alt = 'shiny target';
+          document.querySelector('.overlay').appendChild(img);
+        } else if (s.shiny_image_path && existing && existing.src !== s.shiny_image_path) {
+          existing.src = s.shiny_image_path;
+        } else if (!s.shiny_image_path && existing) {
+          existing.remove();
+        }
+      }
+      setInterval(refresh, 1000);
+    </script>
+  </body>
+</html>
