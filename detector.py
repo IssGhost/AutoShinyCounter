@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,7 @@ class DetectorConfig:
     poll_interval_ms: int = 250
     cooldown_seconds: float = 3.0
     ocr_enabled: bool = True
+    tesseract_cmd: str = ""
     ocr_roi: tuple[float, float, float, float] = (0.05, 0.72, 0.90, 0.25)
     ocr_phrases: tuple[str, ...] = ("wild", "appeared")
     ocr_min_confidence: float = 0.55
@@ -34,6 +36,15 @@ class BattleDetector:
         self.prev_motion_frame: Optional[np.ndarray] = None
         self.last_detection_time = 0.0
         self.active_battle = False
+        self.warned_missing_tesseract = False
+        self.warned_bad_template_size = False
+
+        if config.tesseract_cmd:
+            pytesseract.pytesseract.tesseract_cmd = config.tesseract_cmd
+        elif os.name == "nt":
+            common = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+            if common.exists():
+                pytesseract.pytesseract.tesseract_cmd = str(common)
 
         if config.template_enabled and config.template_image_path:
             path = Path(config.template_image_path)
@@ -73,7 +84,16 @@ class BattleDetector:
             return False
         roi = self._crop_roi(frame, self.config.ocr_roi)
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        text = pytesseract.image_to_string(gray).lower()
+        try:
+            text = pytesseract.image_to_string(gray).lower()
+        except pytesseract.TesseractNotFoundError:
+            if not self.warned_missing_tesseract:
+                print(
+                    "WARNING: Tesseract was not found. Set config `ocr.tesseract_cmd` to your "
+                    "tesseract.exe path (for example: C:\\Program Files\\Tesseract-OCR\\tesseract.exe)."
+                )
+                self.warned_missing_tesseract = True
+            return False
         hits = sum(1 for phrase in self.config.ocr_phrases if phrase.lower() in text)
         confidence = hits / max(len(self.config.ocr_phrases), 1)
         return confidence >= self.config.ocr_min_confidence
@@ -82,9 +102,22 @@ class BattleDetector:
         if not (self.config.template_enabled and self.template is not None):
             return False
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        result = cv2.matchTemplate(gray, self.template, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, _ = cv2.minMaxLoc(result)
-        return max_val >= self.config.template_threshold
+        th, tw = self.template.shape[:2]
+        fh, fw = gray.shape[:2]
+        if th > fh or tw > fw:
+            if not self.warned_bad_template_size:
+                print(
+                    "WARNING: Template image is larger than the camera frame. "
+                    "Use a smaller crop for `template.image_path`."
+                )
+                self.warned_bad_template_size = True
+            return False
+        try:
+            result = cv2.matchTemplate(gray, self.template, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            return max_val >= self.config.template_threshold
+        except cv2.error:
+            return False
 
     def detect_new_battle(self) -> bool:
         if self.cap is None:

@@ -6,6 +6,10 @@ cooldown_seconds: 3.0
 # OCR mode checks for expected battle text fragments.
 ocr:
   enabled: true
+  # Optional explicit path for systems where tesseract is installed but not in PATH.
+  # Windows example:
+  # tesseract_cmd: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+  tesseract_cmd: ""
   roi: [0.05, 0.72, 0.90, 0.25] # x, y, w, h (relative to frame)
   phrases:
     - "wild"

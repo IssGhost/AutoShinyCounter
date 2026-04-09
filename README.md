@@ -32,11 +32,13 @@ Edit `config.yaml`:
 - `camera_index`: your capture card index (`0`, `1`, etc.)
 - OCR mode:
   - `ocr.enabled: true`
+  - `ocr.tesseract_cmd`: optional full path to `tesseract.exe` if PATH is not working
   - `ocr.roi`: portion of frame where battle text appears
   - `ocr.phrases`: fragments expected during battle intro (`wild`, `appeared`)
 - Template mode:
   - `template.enabled: true` and set `template.image_path`
   - Use a cropped image of a consistent battle-start HUD element
+  - Ensure template image is smaller than the captured frame resolution
 - Anti-duplicate settings:
   - `cooldown_seconds`
   - `detection.min_motion_score`
