@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Auto Shiny Tracker</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2rem; max-width: 900px; }
+      .row { display: flex; gap: 2rem; align-items: flex-start; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; flex: 1; }
+      .value { font-size: 3rem; margin: 0.3rem 0; }
+      button { margin-right: 0.5rem; }
+      img { max-width: 280px; border-radius: 8px; border: 1px solid #ccc; }
+      code { background: #f2f2f2; padding: 2px 4px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Auto Shiny Tracker</h1>
+    <p>Use <code>/overlay</code> in OBS Browser Source to display only the encounter widget.</p>
+
+    <div class="row">
+      <div class="card">
+        <h2>{{ state.target_name or "Current Hunt" }}</h2>
+        <p class="value" id="encounters">{{ state.encounters }}</p>
+        <p>Status: <strong id="running">{{ "Running" if state.running else "Stopped" }}</strong></p>
+        <p>Last Event (UTC): <span id="last_event">{{ state.last_event_at or "-" }}</span></p>
+        <div>
+          <button onclick="post('/api/start')">Start</button>
+          <button onclick="post('/api/stop')">Stop</button>
+          <button onclick="post('/api/increment')">+1 Manual</button>
+          <button onclick="post('/api/reset')">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Shiny Target</h3>
+        {% if state.shiny_image_path %}
+          <img src="{{ state.shiny_image_path }}" alt="target shiny" />
+        {% else %}
+          <p>No shiny image uploaded yet.</p>
+        {% endif %}
+
+        <form method="post" action="/api/target">
+          <p><label>Target name <input name="target_name" placeholder="e.g. Shiny Charcadet" /></label></p>
+          <button type="submit">Save target name</button>
+        </form>
+
+        <form method="post" action="/api/upload_shiny" enctype="multipart/form-data">
+          <p><label>Upload shiny image <input name="shiny_image" type="file" accept="image/*" /></label></p>
+          <button type="submit">Upload</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      async function post(path) {
+        await fetch(path, { method: 'POST' });
+      }
+
+      async function refresh() {
+        const res = await fetch('/api/state');
+        const s = await res.json();
+        document.getElementById('encounters').textContent = s.encounters;
+        document.getElementById('running').textContent = s.running ? 'Running' : 'Stopped';
+        document.getElementById('last_event').textContent = s.last_event_at || '-';
+      }
+      setInterval(refresh, 1000);
+    </script>
+  </body>
+</html>
